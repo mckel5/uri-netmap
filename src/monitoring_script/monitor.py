@@ -30,4 +30,4 @@ for node in nodes.find():
 
             sla_stats = json.loads(
                 connection.send_command(f"show ip sla statistics {index} | json")
-            )
+            )["TABLE_stats"]["ROW_stats"]
