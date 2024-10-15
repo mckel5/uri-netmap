@@ -2,7 +2,7 @@ from os import getenv
 from dotenv import load_dotenv
 import netmiko
 import json
-from pymongo import MongoClient
+from pymongo import MongoClient, database
 from datetime import datetime
 import re
 
@@ -13,8 +13,17 @@ def main():
     db_client = MongoClient()
     db = db_client.netmap
 
+    all_stats = scan_nodes(db)
+
     # Clear the statistics table
     db.sla_stats.delete_many({})
+
+    for node_stats in all_stats:
+        db.sla_stats.insert_many(node_stats)
+
+
+def scan_nodes(db: database.Database) -> list[list[dict[str, any]]]:
+    parsed_stats = []
 
     for node in db.nodes.find():
         device = {
@@ -37,8 +46,11 @@ def main():
             if not isinstance(sla_configuration, list):
                 sla_configuration = [sla_configuration]
 
-            parsed_stats = format_sla_stats(sla_configuration, connection, device["ip"])
-            db.sla_stats.insert_many(parsed_stats)
+            parsed_stats.append(
+                format_sla_stats(sla_configuration, connection, device["ip"])
+            )
+
+    return parsed_stats
 
 
 def format_sla_stats(
