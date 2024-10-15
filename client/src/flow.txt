@@ -1,0 +1,9 @@
+route: /node/<hostname> (e.g. /node/TylerCore9504)
+
+fetch all SLA data where this node is the source
+
+draw each node on the map, with the source node is distinguished in some way
+
+color of lines between nodes represents health of link
+
+two lines, one each for src->dest and dest->src
