@@ -10,9 +10,16 @@ import {
 
 import "@xyflow/react/dist/style.css";
 
-// export default function NodeMap() {
-//   return <p>Hello</p>;
-// }
+/**
+ * Generates a color between red and green based on the input value
+ * @param {number} successRate a number between 0 and 1
+ * @returns a HSL code corresponding to the desired color
+ */
+function getEdgeColor(successRate) {
+  //value from 0 to 1
+  var hue = ((1 - successRate) * 120).toString(10);
+  return ["hsl(", hue, ",100%,50%)"].join("");
+}
 
 export default function NodeMap() {
   const { hostname: sourceNodeName } = useParams();
@@ -58,6 +65,9 @@ export default function NodeMap() {
             await fetch(`http://10.10.96.234:5000/api/nodes?ip=${targetIp}`)
           ).json();
           const targetNodeName = targetNode ? targetNode.hostname : targetIp;
+          const successRate =
+            statistic["successes"] /
+            (statistic["successes"] + statistic["failures"]);
 
           // Calculate target node's position on semicircle
           const x =
@@ -76,7 +86,7 @@ export default function NodeMap() {
             source: sourceNodeName,
             target: targetNodeName,
             animated: true,
-            style: {backgroundColor: 'red'}
+            style: { stroke: getEdgeColor(successRate), "stroke-width": 2 },
           });
         }
 
