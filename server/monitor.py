@@ -2,18 +2,21 @@ from os import getenv
 from dotenv import load_dotenv
 import netmiko
 import json
-from pymongo import MongoClient, database
+from pymongo import MongoClient
+from pymongo.synchronous.cursor import Cursor
+from pymongo.collection import Collection
 from datetime import datetime
 import re
+from typing import Any
 
 
 def main():
     load_dotenv()
 
-    db_client = MongoClient()
-    db = db_client.netmap
+    db = MongoClient().netmap
+    nodes = db.nodes.find()
 
-    all_stats = scan_nodes(db)
+    all_stats, target_ips = scan_nodes(nodes)
 
     # Clear the statistics table
     db.sla_stats.delete_many({})
@@ -21,11 +24,17 @@ def main():
     for node_stats in all_stats:
         db.sla_stats.insert_many(node_stats)
 
+    for ip in target_ips:
+        add_node_if_not_exists(ip, db.nodes)
 
-def scan_nodes(db: database.Database) -> list[list[dict[str, any]]]:
+
+def scan_nodes(nodes: Cursor) -> tuple[list[list[dict[str, Any]]], list[str]]:
+    """Search each node for SLA entries"""
+
     parsed_stats = []
+    target_ips = []
 
-    for node in db.nodes.find():
+    for node in nodes:
         device = {
             "device_type": "cisco_ios",
             "ip": node["ip"],
@@ -46,19 +55,44 @@ def scan_nodes(db: database.Database) -> list[list[dict[str, any]]]:
             if not isinstance(sla_configuration, list):
                 sla_configuration = [sla_configuration]
 
-            parsed_stats.append(
-                format_sla_stats(sla_configuration, connection, device["ip"])
-            )
+            stats, _target_ips = gather_sla_statistics(sla_configuration, connection)
+            formatted_stats = format_sla_statistics(stats)
 
-    return parsed_stats
+            parsed_stats.append(formatted_stats)
+            target_ips.extend(_target_ips)
+
+    return parsed_stats, target_ips
 
 
-def format_sla_stats(
+def gather_sla_statistics(
     sla_configuration: list[dict[str, str]],
-    connection: netmiko.ConnectHandler,
-    source_address: str,
-) -> list[dict[str, any]]:
-    result = []
+    connection: netmiko.BaseConnection,
+) -> tuple[list[dict[str, str]], list[str]]:
+    """Gather all SLA statistics configured on a node"""
+
+    stats = []
+    target_ips = []
+
+    for entry in sla_configuration:
+        index = entry["index"]
+
+        statistic = json.loads(
+            connection.send_command(f"show ip sla statistics {index} | json")
+        )["TABLE_stats"]["ROW_stats"]["TABLE_detail"]["ROW_detail"]
+
+        statistic["src-ip"] = connection.host
+        statistic["dest-ip"] = entry["dest-ip"]
+        statistic["successes"] = re.search("\d+", statistic["outstring1"]).group()
+        statistic["failures"] = re.search("\d+", statistic["outstring2"]).group()
+
+        stats.append(statistic)
+        target_ips.append(entry["dest-ip"])
+
+    return stats, target_ips
+
+
+def format_sla_statistics(raw_stats: list[dict[str, str]]) -> list[dict[str, any]]:
+    """Format SLA statistics, excluding unnecessary stats"""
 
     DESIRED_STATISTICS = {
         "ds-jitter-avg": "int",
@@ -79,41 +113,57 @@ def format_sla_stats(
         "sd-lat-ow-avg": "int",
         "sd-lat-ow-max": "int",
         "sd-lat-ow-min": "int",
+        "src-ip": "str",
+        "dest-ip": "str",
+        "successes": "int",
+        "failures": "int"
     }
 
-    for entry in sla_configuration:
-        index = entry["index"]
-        source_address = source_address
-        target_address = entry["dest-ip"]
+    formatted_stats = []
 
-        sla_result = json.loads(
-            connection.send_command(f"show ip sla statistics {index} | json")
-        )["TABLE_stats"]["ROW_stats"]["TABLE_detail"]["ROW_detail"]
-
-        formatted_result = {}
+    for statistic in raw_stats:
+        formatted_statistic = {}
 
         # Convert data to proper types, if needed
-        for statistic, datatype in DESIRED_STATISTICS.items():
-            match datatype:
+        for stat_name, stat_type in DESIRED_STATISTICS.items():
+            match stat_type:
                 case "int":
-                    formatted_result[statistic] = int(sla_result[statistic])
+                    formatted_statistic[stat_name] = int(statistic[stat_name])
                 case "date":
-                    formatted_result[statistic] = datetime.strptime(
-                        sla_result[statistic], "%H:%M:%S.%f %Z %a %b %d %Y"
+                    formatted_statistic[stat_name] = datetime.strptime(
+                        statistic[stat_name], "%H:%M:%S.%f %Z %a %b %d %Y"
                     )
+                case _:
+                    formatted_statistic[stat_name] = statistic[stat_name]
 
-        formatted_result["src-ip"] = source_address
-        formatted_result["dest-ip"] = target_address
-        formatted_result["successes"] = int(
-            re.search("\d+", sla_result["outstring1"]).group()
-        )
-        formatted_result["failures"] = int(
-            re.search("\d+", sla_result["outstring2"]).group()
-        )
+        formatted_stats.append(formatted_statistic)
 
-        result.append(formatted_result)
+    return formatted_stats
 
-    return result
+
+def add_node_if_not_exists(ip: str, nodes: Collection):
+    """Add a node to the 'nodes' collection if it does not exist"""
+
+    if nodes.find_one({"ip": ip}):
+        return
+
+    device = {
+        "device_type": "cisco_ios",
+        "ip": ip,
+        "username": getenv("MONITOR_USERNAME"),
+        "password": getenv("MONITOR_PASSWORD"),
+    }
+
+    with netmiko.ConnectHandler(**device) as connection:
+        try:
+            hostname = json.loads(connection.send_command(f"show version | json"))[
+                "host_name"
+            ]
+        except json.JSONDecodeError:
+            # Invalid response from node (may not have correct priviliges to format as JSON)
+            return
+
+    nodes.insert_one({"hostname": hostname, "ip": ip})
 
 
 if __name__ == "__main__":
