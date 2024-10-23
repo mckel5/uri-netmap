@@ -1,32 +1,64 @@
-from flask import Flask, Response
+from flask import Flask, Response, request, abort
 from flask_cors import CORS
 from pymongo import MongoClient
 from bson import json_util
 
 app = Flask(__name__)
-CORS(app)
+CORS(app)  # Prevents "Cross-Origin Request Blocked" errors
 
-db_client = MongoClient()
-db = db_client.netmap
-nodes = db.nodes
-sla_stats = db.sla_stats
+db = MongoClient().netmap
 
 
-@app.route("/api/node/<hostname>/source")
-def source(hostname: str):
-    ip = nodes.find_one(filter={"hostname": hostname})["ip"]
+@app.route("/api/stats")
+def stats():
+    source_hostname = request.args.get("source")
+    target_hostname = request.args.get("target")
+
+    filter_options = {}
+
+    if source_hostname:
+        try:
+            source_ip = db.nodes.find_one({"hostname": source_hostname})["ip"]
+            filter_options["src-ip"] = source_ip
+        except TypeError:
+            filter_options["src-ip"] = None
+
+    if target_hostname:
+        try:
+            target_ip = db.nodes.find_one({"hostname": target_hostname})["ip"]
+            filter_options["dest-ip"] = target_ip
+        except TypeError:
+            filter_options["dest-ip"] = None
+
+    result = db.sla_stats.find(filter_options).to_list()
 
     return Response(
-        json_util.dumps(sla_stats.find(filter={"src-ip": ip}).to_list()),
+        json_util.dumps(result),
         mimetype="application/json",
     )
 
 
-@app.route("/api/node/<hostname>/target")
-def target(hostname: str):
-    ip = nodes.find_one(filter={"hostname": hostname})["ip"]
+@app.route("/api/nodes")
+def all_nodes():
+    hostname = request.args.get("hostname")
+    ip = request.args.get("ip")
+
+    filter_options = {}
+
+    if hostname:
+        filter_options["hostname"] = hostname
+    if ip:
+        filter_options["ip"] = ip
+
+    if filter_options:
+        # Return object if options specified
+        # Hostnames and IPs are unique, so at most one object will be returned
+        result = db.nodes.find_one(filter_options)
+    else:
+        # Return list of objects otherwise
+        result = db.nodes.find().to_list()
 
     return Response(
-        json_util.dumps(sla_stats.find(filter={"dest-ip": ip}).to_list()),
+        json_util.dumps(result),
         mimetype="application/json",
     )
