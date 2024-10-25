@@ -7,28 +7,23 @@ import {
   applyEdgeChanges,
   applyNodeChanges,
 } from "@xyflow/react";
+import Tooltip from "./Tooltip";
 
 import "@xyflow/react/dist/style.css";
-
-/**
- * Generates a color between red and green based on the input value
- * @param {number} successRate a number between 0 and 1
- * @returns a HSL code corresponding to the desired color
- */
-function getEdgeColor(successRate) {
-  //value from 0 to 1
-  var hue = ((1 - successRate) * 120).toString(10);
-  return ["hsl(", hue, ",100%,50%)"].join("");
-}
 
 export default function NodeMap() {
   const { hostname: sourceNodeName } = useParams();
   const url = new URL("http://10.10.96.234:5000/api/stats");
   url.searchParams.set("source", sourceNodeName);
 
-  // const [data, setData] = useState([]);
+  const [statistics, setStatistics] = useState([]);
+
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
+
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [tooltipData, setTooltipData] = useState({});
+  const [tooltipIsVisible, setTooltipIsVisible] = useState(false);
 
   const onNodesChange = useCallback(
     (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
@@ -39,11 +34,29 @@ export default function NodeMap() {
     []
   );
 
+  const onEdgeMouseEnter = useCallback((_event, edge) => {
+    const { clientX, clientY } = _event;
+    setTooltipPosition({ x: clientX, y: clientY });
+    setTooltipData(edge.data.statistic);
+    setTooltipIsVisible(true);
+  }, []);
+
+  const onEdgeMouseMove = useCallback((_event, edge) => {
+    const { clientX, clientY } = _event;
+    setTooltipPosition({ x: clientX, y: clientY });
+  }, []);
+
+  const onEdgeMouseLeave = useCallback((_event, edge) => {
+    setTooltipIsVisible(false);
+  }, []);
+
   useEffect(() => {
     (async () => {
       try {
         const response = await fetch(url);
         const result = await response.json();
+
+        let statistics = result;
 
         let nodes = [];
         let edges = [];
@@ -58,7 +71,7 @@ export default function NodeMap() {
         const mapRadius = Math.min(innerWidth, innerHeight) * 0.5;
         const numOuterNodes = result.length;
 
-        for (const [i, statistic] of result.entries()) {
+        for (const [i, statistic] of statistics.entries()) {
           // Use target node's hostname if it is known, otherwise use its IP address
           const targetIp = statistic["dest-ip"];
           const targetNode = await (
@@ -82,18 +95,17 @@ export default function NodeMap() {
           });
 
           edges.push({
-            id: `${sourceNodeName} ${targetNodeName}`,
+            id: i.toString(),
             source: sourceNodeName,
             target: targetNodeName,
             animated: true,
-            style: { stroke: getEdgeColor(successRate), "stroke-width": 2 },
+            style: { stroke: getEdgeColor(successRate), strokeWidth: 2 },
+            data: { statistic: statistic },
           });
         }
 
         setNodes(nodes);
         setEdges(edges);
-
-        // setInitialEdges([{ id: 'e1-2', source: '1', target: '2' }]);
       } catch (error) {
         console.error("Error fetching data:", error);
       }
@@ -107,12 +119,31 @@ export default function NodeMap() {
         onNodesChange={onNodesChange}
         edges={edges}
         onEdgesChange={onEdgesChange}
+        onEdgeMouseEnter={onEdgeMouseEnter}
+        onEdgeMouseMove={onEdgeMouseMove}
+        onEdgeMouseLeave={onEdgeMouseLeave}
         fitView
         colorMode="dark"
       >
         <Background />
         <Controls />
+        <Tooltip
+          position={tooltipPosition}
+          data={tooltipData}
+          isVisible={tooltipIsVisible}
+        />
       </ReactFlow>
     </div>
   );
+}
+
+/**
+ * Generates a color between red and green based on the input value
+ * @param {Number} successRate a number between 0 and 1
+ * @returns a HSL code corresponding to the desired color
+ */
+function getEdgeColor(successRate) {
+  // https://stackoverflow.com/a/17268489
+  var hue = (successRate * 120).toString(10);
+  return ["hsl(", hue, ",100%,50%)"].join("");
 }

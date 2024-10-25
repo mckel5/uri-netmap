@@ -1,0 +1,16 @@
+.tooltip-container {
+    position: fixed;
+    z-index: 9999;
+    background-color: var(--xy-background-color-default);
+    border: 2px solid white;
+    border-radius: 10px;
+    font-size: 0.8em;
+}
+
+.tooltip-container ul {
+    padding: 0 20px;
+}
+
+.tooltip-container li {
+    list-style: none;
+}
