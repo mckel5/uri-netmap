@@ -61,6 +61,9 @@ export default function NodeMap() {
 
         let statistics = result;
 
+        // Return blank map if desired node does not exist
+        if (Object.keys(statistics).length === 0) return;
+
         let nodes: Node[] = [];
         let edges: Edge[] = [];
 
