@@ -1,8 +1,6 @@
-import React from "react";
-
 import "./Tooltip.css";
 
-const Tooltip = ({ position, data, isVisible }) => {
+const Tooltip = ({ position, data, isVisible }: { position: {x: number, y: number}, data: object, isVisible: boolean }) => {
   if (!isVisible) {
     return null;
   }
