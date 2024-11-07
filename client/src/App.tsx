@@ -6,7 +6,7 @@ export default function App() {
     <>
       <BrowserRouter>
         <Routes>
-          <Route path='node/:hostname' element={<NodeMap />}>
+          <Route path='/' element={<NodeMap />}>
           </Route>
         </Routes>
       </BrowserRouter>

@@ -13,13 +13,15 @@ import {
 } from "@xyflow/react";
 
 import Tooltip from "./Tooltip";
+import initialNodes from "./initial_nodes";
 
 import "@xyflow/react/dist/style.css";
+import getInitialEdges from "./initial_edges";
 
 export default function NodeMap() {
-  const { hostname: sourceNodeName } = useParams();
-  const url = new URL("http://10.10.96.234:5000/api/stats");
-  url.searchParams.set("source", sourceNodeName as string);
+  // const { hostname: sourceNodeName } = useParams();
+  // const url = new URL("http://10.10.96.234:5000/api/stats");
+  // url.searchParams.set("source", sourceNodeName as string);
 
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
@@ -56,59 +58,16 @@ export default function NodeMap() {
   useEffect(() => {
     (async () => {
       try {
-        const response = await fetch(url);
-        const result = await response.json();
+        // const response = await fetch(url);
+        // const result = await response.json();
 
-        let statistics = result;
+        // let statistics = result;
 
-        // Return blank map if desired node does not exist
-        if (Object.keys(statistics).length === 0) return;
+        // // Return blank map if desired node does not exist
+        // if (Object.keys(statistics).length === 0) return;
 
-        let nodes: Node[] = [];
-        let edges: Edge[] = [];
-
-        nodes.push({
-          id: sourceNodeName!,
-          position: { x: 0, y: 0 },
-          data: { label: sourceNodeName },
-        });
-
-        // Target nodes are evenly distributed around a semicircle under the source node
-        const mapRadius = Math.min(innerWidth, innerHeight) * 0.5;
-        const numOuterNodes = result.length;
-
-        for (const [i, statistic] of statistics.entries()) {
-          // Use target node's hostname if it is known, otherwise use its IP address
-          const targetIp = statistic["dest-ip"];
-          const targetNode = await (
-            await fetch(`http://10.10.96.234:5000/api/nodes?ip=${targetIp}`)
-          ).json();
-          const targetNodeName = targetNode ? targetNode.hostname : targetIp;
-          const successRate =
-            statistic["successes"] /
-            (statistic["successes"] + statistic["failures"]);
-
-          // Calculate target node's position on semicircle
-          const x =
-            mapRadius * Math.cos((i + 1) * (Math.PI / (numOuterNodes + 1)));
-          const y =
-            mapRadius * Math.sin((i + 1) * (Math.PI / (numOuterNodes + 1)));
-
-          nodes.push({
-            id: targetNodeName,
-            position: { x: x, y: y },
-            data: { label: targetNodeName },
-          });
-
-          edges.push({
-            id: i.toString(),
-            source: sourceNodeName!,
-            target: targetNodeName,
-            animated: true,
-            style: { stroke: getEdgeColor(successRate), strokeWidth: 2 },
-            data: { statistic: statistic },
-          });
-        }
+        let nodes: Node[] = initialNodes;
+        let edges: Edge[] = await getInitialEdges();
 
         setNodes(nodes);
         setEdges(edges);
