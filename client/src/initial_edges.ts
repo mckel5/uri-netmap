@@ -30,6 +30,7 @@ async function getInitialEdges(): Promise<Edge[]> {
       source: srcName,
       target: destName,
       animated: true,
+      type: "straight",
       style: { stroke: getEdgeColor(statistic), "stroke-width": 2 },
     });
   }
