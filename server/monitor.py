@@ -5,7 +5,7 @@ import json
 from pymongo import MongoClient
 from pymongo.synchronous.cursor import Cursor
 from pymongo.collection import Collection
-from datetime import datetime
+from dateutil.parser import parse as parse_date
 import re
 from typing import Any
 
@@ -116,7 +116,7 @@ def format_sla_statistics(raw_stats: list[dict[str, str]]) -> list[dict[str, any
         "src-ip": "str",
         "dest-ip": "str",
         "successes": "int",
-        "failures": "int"
+        "failures": "int",
     }
 
     formatted_stats = []
@@ -130,8 +130,8 @@ def format_sla_statistics(raw_stats: list[dict[str, str]]) -> list[dict[str, any
                 case "int":
                     formatted_statistic[stat_name] = int(statistic[stat_name])
                 case "date":
-                    formatted_statistic[stat_name] = datetime.strptime(
-                        statistic[stat_name], "%H:%M:%S.%f %Z %a %b %d %Y"
+                    formatted_statistic[stat_name] = parse_date(
+                        statistic[stat_name], tzinfos={"EDT": "UTC-4", "EST": "UTC-5"}
                     )
                 case _:
                     formatted_statistic[stat_name] = statistic[stat_name]
