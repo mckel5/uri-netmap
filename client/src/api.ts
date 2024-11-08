@@ -1,19 +1,19 @@
 const apiUrl = "http://10.10.96.234:5000/api";
 
-export type NetNode = {
+export interface NetNode {
   ip: string;
   hostname: string;
-};
+}
 
-export type Statistic = {
-  _id: object;
+export interface Statistic {
+  _id: { $oid: string };
   "ds-jitter-avg": number;
   "ds-jitter-max": number;
   "ds-jitter-min": number;
   "ds-lat-ow-avg": number;
   "ds-lat-ow-max": number;
   "ds-lat-ow-min": number;
-  "latest-start-time": object;
+  "latest-start-time": { $date: string };
   "pkt-loss-ds": number;
   "pkt-loss-sd": number;
   "rtt-avg": number;
@@ -29,7 +29,7 @@ export type Statistic = {
   "dest-ip": string;
   successes: number;
   failures: number;
-};
+}
 
 export async function getAllStatistics(): Promise<Statistic[]> {
   return await (await fetch(`${apiUrl}/stats`)).json();

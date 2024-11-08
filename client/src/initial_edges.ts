@@ -31,7 +31,8 @@ async function getInitialEdges(): Promise<Edge[]> {
       target: destName,
       animated: true,
       type: "straight",
-      style: { stroke: getEdgeColor(statistic), "stroke-width": 2 },
+      style: { stroke: getEdgeColor(statistic), strokeWidth: 2 },
+      data: { stats: statistic },
     });
   }
   return edges;

@@ -17,6 +17,7 @@ import initialNodes from "./initial_nodes";
 
 import "@xyflow/react/dist/style.css";
 import getInitialEdges from "./initial_edges";
+import { Statistic } from "./api";
 
 export default function NodeMap() {
   // const { hostname: sourceNodeName } = useParams();
@@ -27,7 +28,7 @@ export default function NodeMap() {
   const [edges, setEdges] = useState<Edge[]>([]);
 
   const [tooltipPosition, setTooltipPosition] = useState<{ x: number, y: number }>({ x: 0, y: 0 });
-  const [tooltipData, setTooltipData] = useState<object>({});
+  const [tooltipData, setTooltipData] = useState<Statistic | null>(null);
   const [tooltipIsVisible, setTooltipIsVisible] = useState<boolean>(false);
 
   const onNodesChange = useCallback(
@@ -40,9 +41,11 @@ export default function NodeMap() {
   );
 
   const onEdgeMouseEnter = useCallback((_event: MouseEvent, edge: Edge) => {
+    if (!edge.data || !("stats" in edge.data)) return;
+
     const { clientX, clientY } = _event;
     setTooltipPosition({ x: clientX, y: clientY });
-    edge.data && setTooltipData(edge.data!.statistic!);
+    setTooltipData(edge.data.stats as Statistic);
     setTooltipIsVisible(true);
   }, []);
 
@@ -100,15 +103,4 @@ export default function NodeMap() {
       </ReactFlow>
     </div>
   );
-}
-
-/**
- * Generates a color between red and green based on the input value
- * @param {Number} successRate a number between 0 and 1
- * @returns a HSL code corresponding to the desired color
- */
-function getEdgeColor(successRate: number) {
-  // https://stackoverflow.com/a/17268489
-  var hue = (successRate * 120).toString(10);
-  return ["hsl(", hue, ",100%,50%)"].join("");
 }
