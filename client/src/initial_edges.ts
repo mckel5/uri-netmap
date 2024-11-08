@@ -1,11 +1,3 @@
-// edges.push({
-//     id: `${sourceNodeName} ${targetNodeName}`,
-//     source: sourceNodeName,
-//     target: targetNodeName,
-//     animated: true,
-//     style: { stroke: getEdgeColor(successRate), "stroke-width": 2 },
-//   });
-
 import { Edge } from "@xyflow/react";
 import { getAllStatistics, getNodeByIp, type Statistic } from "./api";
 
