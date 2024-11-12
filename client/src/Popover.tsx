@@ -1,7 +1,7 @@
 import { Statistic } from "./api";
-import "./Tooltip.css";
+import "./Popover.css";
 
-const Tooltip = ({
+const Popover = ({
   position,
   data,
   isVisible,
@@ -25,7 +25,7 @@ const Tooltip = ({
 
   return (
     <div
-      className="tooltip-container"
+      className="popover-container"
       style={{
         top: y,
         left: x,
@@ -33,7 +33,11 @@ const Tooltip = ({
     >
       {data ? (
         <ul>
-          <li><h3>{sourceName} &#8594; {targetName}</h3></li>
+          <li>
+            <h3>
+              {sourceName} &#8594; {targetName}
+            </h3>
+          </li>
           <li>
             <strong>Latest test:</strong> {formattedDate}
           </li>
@@ -87,4 +91,4 @@ const Tooltip = ({
   );
 };
 
-export default Tooltip;
+export default Popover;
