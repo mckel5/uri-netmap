@@ -24,9 +24,6 @@ def main():
     for node_stats in all_stats:
         db.sla_stats.insert_many(node_stats)
 
-    for ip in target_ips:
-        add_node_if_not_exists(ip, db.nodes)
-
 
 def scan_nodes(nodes: Cursor) -> tuple[list[list[dict[str, Any]]], list[str]]:
     """Search each node for SLA entries"""
@@ -139,31 +136,6 @@ def format_sla_statistics(raw_stats: list[dict[str, str]]) -> list[dict[str, any
         formatted_stats.append(formatted_statistic)
 
     return formatted_stats
-
-
-def add_node_if_not_exists(ip: str, nodes: Collection):
-    """Add a node to the 'nodes' collection if it does not exist"""
-
-    if nodes.find_one({"ip": ip}):
-        return
-
-    device = {
-        "device_type": "cisco_ios",
-        "ip": ip,
-        "username": getenv("MONITOR_USERNAME"),
-        "password": getenv("MONITOR_PASSWORD"),
-    }
-
-    with netmiko.ConnectHandler(**device) as connection:
-        try:
-            hostname = json.loads(connection.send_command(f"show version | json"))[
-                "host_name"
-            ]
-        except json.JSONDecodeError:
-            # Invalid response from node (may not have correct priviliges to format as JSON)
-            return
-
-    nodes.insert_one({"hostname": hostname, "ip": ip})
 
 
 if __name__ == "__main__":
