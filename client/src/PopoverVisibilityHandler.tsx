@@ -20,17 +20,17 @@ function useHandler(ref: RefObject<any>, callback: CallableFunction) {
     }
 
     // Bind the event listeners
-    // Some listeners must be applied to the renderer instead of the document to work
-    const [renderer] = document.getElementsByClassName("react-flow__renderer");
+    // Some listeners must be applied to the view pane instead of the document to work
+    const [pane] = document.getElementsByClassName("react-flow__pane");
     document.addEventListener("click", handleClickOutside);
-    renderer.addEventListener("mousedown", () => callback());
-    renderer.addEventListener("wheel", () => callback());
+    pane.addEventListener("mousedown", () => callback());
+    pane.addEventListener("wheel", () => callback());
     
     return () => {
       // Unbind the event listeners on clean up
       document.removeEventListener("click", handleClickOutside);
-      renderer.removeEventListener("mousedown", () => callback());
-      renderer.removeEventListener("wheel", () => callback());
+      pane.removeEventListener("mousedown", () => callback());
+      pane.removeEventListener("wheel", () => callback());
     };
   }, [ref]);
 }
