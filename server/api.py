@@ -62,3 +62,12 @@ def all_nodes():
         json_util.dumps(result),
         mimetype="application/json",
     )
+
+@app.route("/api/node_positions")
+def initial_nodes():
+    result = db.node_positions.find().to_list()
+
+    return Response(
+        json_util.dumps(result),
+        mimetype="application/json",
+    )
