@@ -47,7 +47,9 @@ function getEdgeColor(statistic: Statistic): string {
   else if (maxJitter < 50) color = yellow;
   else color = red;
 
-  if (statistic["successes"] === 0) color = gray;
+  const successRate = statistic.successes / (statistic.successes + statistic.failures);
+
+  if (successRate < 0.33) color = gray;
 
   return color;
 }
