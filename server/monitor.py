@@ -2,6 +2,7 @@ from os import getenv
 from dotenv import load_dotenv
 import netmiko
 import json
+import netmiko.exceptions
 from pymongo import MongoClient
 from pymongo.synchronous.cursor import Cursor
 from pymongo.collection import Collection
@@ -16,7 +17,7 @@ def main():
     db = MongoClient().netmap
     nodes = db.nodes.find()
 
-    all_stats, target_ips = scan_nodes(nodes)
+    all_stats = scan_nodes(nodes)
 
     # Clear the statistics table
     db.sla_stats.delete_many({})
@@ -29,7 +30,6 @@ def scan_nodes(nodes: Cursor) -> tuple[list[list[dict[str, Any]]], list[str]]:
     """Search each node for SLA entries"""
 
     parsed_stats = []
-    target_ips = []
 
     for node in nodes:
         device = {
@@ -39,26 +39,29 @@ def scan_nodes(nodes: Cursor) -> tuple[list[list[dict[str, Any]]], list[str]]:
             "password": getenv("MONITOR_PASSWORD"),
         }
 
-        with netmiko.ConnectHandler(**device) as connection:
-            try:
-                sla_configuration = json.loads(
-                    connection.send_command("show ip sla configuration | json")
-                )["TABLE_configuration"]["ROW_configuration"]
-            except json.JSONDecodeError:
-                # SLA is not configured on this device
-                continue
+        try:
+            with netmiko.ConnectHandler(**device) as connection:
+                try:
+                    sla_configuration = json.loads(
+                        connection.send_command("show ip sla configuration | json")
+                    )["TABLE_configuration"]["ROW_configuration"]
+                except json.JSONDecodeError:
+                    # SLA is not configured on this device
+                    continue
 
-            # Device will return a single object if only one entry exists
-            if not isinstance(sla_configuration, list):
-                sla_configuration = [sla_configuration]
+                # Device will return a single object if only one entry exists
+                if not isinstance(sla_configuration, list):
+                    sla_configuration = [sla_configuration]
 
-            stats, _target_ips = gather_sla_statistics(sla_configuration, connection)
-            formatted_stats = format_sla_statistics(stats)
+                stats = gather_sla_statistics(sla_configuration, connection)
+                formatted_stats = format_sla_statistics(stats)
 
-            parsed_stats.append(formatted_stats)
-            target_ips.extend(_target_ips)
+                parsed_stats.append(formatted_stats)
 
-    return parsed_stats, target_ips
+        except netmiko.exceptions.NetmikoAuthenticationException:
+            print(f"Error logging into {node['hostname']} ({node['ip']})")
+
+    return parsed_stats
 
 
 def gather_sla_statistics(
@@ -68,7 +71,6 @@ def gather_sla_statistics(
     """Gather all SLA statistics configured on a node"""
 
     stats = []
-    target_ips = []
 
     for entry in sla_configuration:
         index = entry["index"]
@@ -83,9 +85,8 @@ def gather_sla_statistics(
         statistic["failures"] = re.search("\d+", statistic["outstring2"]).group()
 
         stats.append(statistic)
-        target_ips.append(entry["dest-ip"])
 
-    return stats, target_ips
+    return stats
 
 
 def format_sla_statistics(raw_stats: list[dict[str, str]]) -> list[dict[str, any]]:
@@ -127,9 +128,19 @@ def format_sla_statistics(raw_stats: list[dict[str, str]]) -> list[dict[str, any
                 case "int":
                     formatted_statistic[stat_name] = int(statistic[stat_name])
                 case "date":
-                    formatted_statistic[stat_name] = parse_date(
-                        statistic[stat_name], tzinfos={"EDT": "UTC-4", "EST": "UTC-5"}
-                    )
+                    try:
+                        formatted_statistic[stat_name] = parse_date(
+                            statistic[stat_name],
+                            tzinfos={
+                                "EDT": "UTC-4",
+                                "edt": "UTC-4",
+                                "EST": "UTC-5",
+                                "est": "UTC-5",
+                            },
+                        )
+                    except:
+                        # Date format not recognized in some instances
+                        formatted_statistic[stat_name] = "N/A"
                 case _:
                     formatted_statistic[stat_name] = statistic[stat_name]
 
