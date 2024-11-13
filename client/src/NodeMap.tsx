@@ -98,7 +98,7 @@ export default function NodeMap() {
         onEdgesChange={onEdgesChange}
         onEdgeClick={onEdgeClick}
         fitView
-        colorMode="dark"
+        // colorMode="dark"
       >
         <Background />
         <Controls />

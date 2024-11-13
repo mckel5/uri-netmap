@@ -31,18 +31,25 @@ async function getInitialEdges(): Promise<Edge[]> {
 }
 
 function getEdgeColor(statistic: Statistic): string {
+  let color;
+
   const green = "#00ff00";
   const yellow = "#ffff00";
   const red = "#ff0000";
+  const gray = "#999999";
 
   const maxJitter = Math.max(
     statistic["sd-jitter-max"],
     statistic["ds-jitter-max"]
   );
 
-  if (maxJitter < 30) return green;
-  else if (maxJitter < 50) return yellow;
-  else return red;
+  if (maxJitter < 30) color = green;
+  else if (maxJitter < 50) color = yellow;
+  else color = red;
+
+  if (statistic["successes"] === 0) color = gray;
+
+  return color;
 }
 
 export default getInitialEdges;
