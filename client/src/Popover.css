@@ -1,10 +1,10 @@
 .popover-container {
     position: fixed;
     z-index: 9999;
+    color: var(--xy-node-color-default);
     background-color: var(--xy-minimap-background-color-default);
-    border: 2px solid white;
+    border: var(--xy-node-border-default);
     border-radius: 10px;
-    border-color: var(--xy-node-border-default);
     font-size: 0.8em;
 }
 

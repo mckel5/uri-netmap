@@ -9,6 +9,8 @@ import {
   type Edge,
   type NodeChange,
   type EdgeChange,
+  ControlButton,
+  type ColorMode
 } from "@xyflow/react";
 
 import Popover from "./Popover";
@@ -20,6 +22,8 @@ import { Statistic } from "./api";
 import PopoverVisibilityHandler from "./PopoverVisibilityHandler";
 
 export default function NodeMap() {
+  const [colorMode, setColorMode] = useState<ColorMode>('light');
+  
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
 
@@ -43,26 +47,6 @@ export default function NodeMap() {
     [setEdges]
   );
 
-  // const onEdgeMouseEnter = useCallback((_event: MouseEvent, edge: Edge) => {
-  //   if (!edge.data || !("stats" in edge.data)) return;
-
-  //   const { clientX, clientY } = _event;
-  //   setPopoverSource(edge.source);
-  //   setPopoverTarget(edge.target);
-  //   setPopoverPosition({ x: clientX, y: clientY });
-  //   setPopoverData(edge.data.stats as Statistic);
-  //   setPopoverIsVisible(true);
-  // }, []);
-
-  // const onEdgeMouseMove = useCallback((_event: MouseEvent, _: Edge) => {
-  //   const { clientX, clientY } = _event;
-  //   setPopoverPosition({ x: clientX, y: clientY });
-  // }, []);
-
-  // const onEdgeMouseLeave = useCallback((_event: MouseEvent, _: Edge) => {
-  //   setPopoverIsVisible(false);
-  // }, []);
-
   const onEdgeClick = useCallback((_event: MouseEvent, edge: Edge) => {
     if (!edge.data || !("stats" in edge.data)) return;
 
@@ -72,7 +56,6 @@ export default function NodeMap() {
     setPopoverPosition({ x: clientX, y: clientY });
     setPopoverData(edge.data.stats as Statistic);
     setPopoverIsVisible(true);
-    console.log("show");
   }, []);
 
   useEffect(() => {
@@ -98,10 +81,12 @@ export default function NodeMap() {
         onEdgesChange={onEdgesChange}
         onEdgeClick={onEdgeClick}
         fitView
-        // colorMode="dark"
+        colorMode={colorMode}
       >
         <Background />
-        <Controls />
+        <Controls>
+          <ControlButton onClick={() => setColorMode(colorMode === 'light' ? 'dark' : 'light')}>{colorMode === 'light' ? '🌙' : '☀️'}</ControlButton>
+        </Controls>
         <PopoverVisibilityHandler callback={() => setPopoverIsVisible(false)}>
           <Popover
             position={popoverPosition}
