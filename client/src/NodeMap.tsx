@@ -10,7 +10,8 @@ import {
   type NodeChange,
   type EdgeChange,
   ControlButton,
-  type ColorMode
+  type ColorMode,
+  useReactFlow,
 } from "@xyflow/react";
 
 import Popover from "./Popover";
@@ -22,8 +23,8 @@ import { Statistic } from "./api";
 import PopoverVisibilityHandler from "./PopoverVisibilityHandler";
 
 export default function NodeMap() {
-  const [colorMode, setColorMode] = useState<ColorMode>('light');
-  
+  const [colorMode, setColorMode] = useState<ColorMode>("light");
+
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
 
@@ -80,12 +81,18 @@ export default function NodeMap() {
         edges={edges}
         onEdgesChange={onEdgesChange}
         onEdgeClick={onEdgeClick}
-        fitView
         colorMode={colorMode}
+        defaultViewport={{ x: 800, y: 450, zoom: 1 }}
       >
         <Background />
         <Controls>
-          <ControlButton onClick={() => setColorMode(colorMode === 'light' ? 'dark' : 'light')}>{colorMode === 'light' ? '🌙' : '☀️'}</ControlButton>
+          <ControlButton
+            onClick={() =>
+              setColorMode(colorMode === "light" ? "dark" : "light")
+            }
+          >
+            {colorMode === "light" ? "🌙" : "☀️"}
+          </ControlButton>
         </Controls>
         <PopoverVisibilityHandler callback={() => setPopoverIsVisible(false)}>
           <Popover
