@@ -1,4 +1,4 @@
-from flask import Flask, Response, request, abort
+from flask import Flask, Response, request
 from flask_cors import CORS
 from pymongo import MongoClient
 from bson import json_util
@@ -9,7 +9,7 @@ CORS(app)  # Prevents "Cross-Origin Request Blocked" errors
 db = MongoClient().netmap
 
 
-@app.route("/api/stats")
+@app.route("/stats")
 def stats():
     source_hostname = request.args.get("source")
     target_hostname = request.args.get("target")
@@ -38,7 +38,7 @@ def stats():
     )
 
 
-@app.route("/api/nodes")
+@app.route("/nodes")
 def all_nodes():
     hostname = request.args.get("hostname")
     ip = request.args.get("ip")
@@ -63,7 +63,8 @@ def all_nodes():
         mimetype="application/json",
     )
 
-@app.route("/api/node_positions")
+
+@app.route("/node_positions")
 def initial_nodes():
     result = db.node_positions.find().to_list()
 
